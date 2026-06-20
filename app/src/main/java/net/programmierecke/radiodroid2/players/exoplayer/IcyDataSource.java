@@ -5,11 +5,12 @@ import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-
-import com.google.android.exoplayer2.upstream.DataSpec;
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
-import com.google.android.exoplayer2.upstream.HttpDataSource;
-import com.google.android.exoplayer2.upstream.TransferListener;
+import androidx.annotation.OptIn;
+import androidx.media3.common.util.UnstableApi;
+import androidx.media3.datasource.DataSpec;
+import androidx.media3.datasource.DefaultHttpDataSource;
+import androidx.media3.datasource.HttpDataSource;
+import androidx.media3.datasource.TransferListener;
 
 import net.programmierecke.radiodroid2.station.live.ShoutcastInfo;
 import net.programmierecke.radiodroid2.station.live.StreamLiveInfo;
@@ -39,6 +40,7 @@ import static okhttp3.internal.Util.closeQuietly;
  * After reconnecting time has passed
  * {@link IcyDataSourceListener#onDataSourceConnectionLostIrrecoverably()} will be called.
  **/
+@OptIn(markerClass = UnstableApi.class)
 public class IcyDataSource implements HttpDataSource {
 
     public static final long DEFAULT_TIME_UNTIL_STOP_RECONNECTING = 2 * 60 * 1000; // 2 minutes
@@ -130,7 +132,7 @@ public class IcyDataSource implements HttpDataSource {
 
         if (!response.isSuccessful()) {
             final Map<String, List<String>> headers = request.headers().toMultimap();
-            throw new InvalidResponseCodeException(responseCode, headers, dataSpec);
+            throw new InvalidResponseCodeException(responseCode, null, null, headers, dataSpec, new byte[0]);
         }
 
         responseBody = response.body();
