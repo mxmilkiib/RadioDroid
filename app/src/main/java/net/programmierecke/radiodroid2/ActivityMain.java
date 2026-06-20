@@ -822,8 +822,7 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
                         })
                         .setNegativeButton(this.getString(R.string.no), null)
                         .show();
-            }
-            if (selectedMenuItem == R.id.nav_item_starred) {
+            } else if (selectedMenuItem == R.id.nav_item_starred) {
                 new AlertDialog.Builder(this)
                         .setMessage(this.getString(R.string.alert_delete_favorites))
                         .setCancelable(true)

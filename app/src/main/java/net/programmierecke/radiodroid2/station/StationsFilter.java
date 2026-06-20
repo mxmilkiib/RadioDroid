@@ -225,6 +225,7 @@ public class StationsFilter extends CustomFilter {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void publishResults(CharSequence constraint, FilterResults results) {
         dataProvider.notifyFilteredStationsChanged(lastRemoteSearchStatus, (List<DataRadioStation>) results.values);
     }
