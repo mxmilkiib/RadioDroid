@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
-import android.os.Build;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -59,7 +58,7 @@ public class FavouriteManager extends StationSaveManager {
     }
 
     public void updateShortcuts() {
-        if (Build.VERSION.SDK_INT >= 25 && !BuildConfig.IS_TESTING.get()) {
+        if (!BuildConfig.IS_TESTING.get()) {
             int number = min(listStations.size(), ActivityMain.MAX_DYNAMIC_LAUNCHER_SHORTCUTS);
             SetDynamicAppLauncherShortcuts setDynamicAppLauncherShortcuts = new SetDynamicAppLauncherShortcuts(number);
             for (int i = 0; i < number; i++) {

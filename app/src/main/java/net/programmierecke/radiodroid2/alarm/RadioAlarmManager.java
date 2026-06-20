@@ -5,7 +5,6 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
@@ -26,7 +25,7 @@ public class RadioAlarmManager {
     private static final int ONE_DAY_IN_MILLIS = 24 * 60 * 60 * 1000;
     private Context context;
     private List<DataRadioStationAlarm> list = new ArrayList<DataRadioStationAlarm>();
-    final int pendingIntentFlag =  Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0;
+    final int pendingIntentFlag = PendingIntent.FLAG_IMMUTABLE;
 
 
     private class AlarmsObservable extends Observable {
@@ -226,16 +225,8 @@ public class RadioAlarmManager {
                     + " " + calendar.get(Calendar.HOUR_OF_DAY) + ":" + calendar.get(Calendar.MINUTE)
             );
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                if(BuildConfig.DEBUG) { Log.d("ALARM","START setAlarmClock"); }
-                alarmMgr.setAlarmClock(new AlarmManager.AlarmClockInfo(calendar.getTimeInMillis(),alarmIntent),alarmIntent);
-            }else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                if(BuildConfig.DEBUG) { Log.d("ALARM","START setExact"); }
-                alarmMgr.setExact(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), alarmIntent);
-            }else{
-                if(BuildConfig.DEBUG) { Log.d("ALARM","START set"); }
-                alarmMgr.set(AlarmManager.RTC_WAKEUP,calendar.getTimeInMillis(),alarmIntent);
-            }
+            if(BuildConfig.DEBUG) { Log.d("ALARM","START setAlarmClock"); }
+            alarmMgr.setAlarmClock(new AlarmManager.AlarmClockInfo(calendar.getTimeInMillis(),alarmIntent),alarmIntent);
         }
     }
 

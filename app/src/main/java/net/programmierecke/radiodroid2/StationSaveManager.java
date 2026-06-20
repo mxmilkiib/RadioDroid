@@ -6,7 +6,6 @@ import android.content.SharedPreferences;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -477,12 +476,8 @@ public class StationSaveManager extends Observable {
             File f = new File(filePath, fileName);
             BufferedWriter bw = new BufferedWriter(new FileWriter(f, false));
             var r = SaveM3UWriter(bw);
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
-                context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_MOUNTED, Uri.parse("file://" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC))));
-            } else {
-                MediaScannerConnection
-                        .scanFile(context, new String[]{f.getAbsolutePath()}, null, null);
-            }
+            MediaScannerConnection
+                    .scanFile(context, new String[]{f.getAbsolutePath()}, null, null);
             return r;
         } catch (Exception e) {
             Log.e("Exception", "File write failed: " + e.toString());

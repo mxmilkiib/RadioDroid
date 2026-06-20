@@ -1,7 +1,6 @@
 package net.programmierecke.radiodroid2.station
 
 import android.content.Context
-import android.os.Build
 import android.view.Gravity
 import android.view.View
 import androidx.fragment.app.FragmentActivity
@@ -68,13 +67,11 @@ object StationPopupMenu {
                         StationActions.setAsAlarm(activity, station)
                     }
                 }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    item {
-                        labelRes = R.string.context_menu_create_shortcut
-                        icon = R.drawable.ic_back_arrow_24dp
-                        callback = {
-                            station.prepareShortcut(context, itemAdapterStation.CreatePinShortcutListener())
-                        }
+                item {
+                    labelRes = R.string.context_menu_create_shortcut
+                    icon = R.drawable.ic_back_arrow_24dp
+                    callback = {
+                        station.prepareShortcut(context, itemAdapterStation.CreatePinShortcutListener())
                     }
                 }
                 item {

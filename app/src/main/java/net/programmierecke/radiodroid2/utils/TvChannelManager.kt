@@ -3,7 +3,6 @@ package net.programmierecke.radiodroid2.utils
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.database.Cursor
-import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.appcompat.content.res.AppCompatResources
@@ -39,9 +38,7 @@ class TvChannelManager(val app: RadioDroidApp) : Observer {
     private var channelId = INVALID_CONTENT_ID
 
     init {
-        if (Build.VERSION.SDK_INT >= 26) {
-            channelId = helper.allChannels.firstOrNull()?.id ?: createDefaultChannel()
-        }
+        channelId = helper.allChannels.firstOrNull()?.id ?: createDefaultChannel()
     }
 
     private fun createDefaultChannel(): Long = try {

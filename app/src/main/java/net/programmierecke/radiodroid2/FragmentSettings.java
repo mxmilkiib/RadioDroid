@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.audiofx.AudioEffect;
-import android.os.Build;
 import android.os.Bundle;
 
 import androidx.annotation.RequiresApi;
@@ -128,11 +127,6 @@ public class FragmentSettings extends PreferenceFragmentCompat implements Shared
                     return false;
                 }
             });
-
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN) {
-                findPreference("settings_retry_timeout").setVisible(false);
-                findPreference("settings_retry_delay").setVisible(false);
-            }
         } else if (s.equals("pref_category_mpd")) {
             findPreference("mpd_servers_viewer").setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
                 @Override
@@ -168,17 +162,13 @@ public class FragmentSettings extends PreferenceFragmentCompat implements Shared
 
         Preference batPref = getPreferenceScreen().findPreference(getString(R.string.key_ignore_battery_optimization));
         if (batPref != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            updateBatteryPrefDescription(batPref);
+            batPref.setOnPreferenceClickListener(preference -> {
+                Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+                startActivity(intent);
                 updateBatteryPrefDescription(batPref);
-                batPref.setOnPreferenceClickListener(preference -> {
-                    Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
-                    startActivity(intent);
-                    updateBatteryPrefDescription(batPref);
-                    return true;
-                });
-            } else {
-                batPref.getParent().removePreference(batPref);
-            }
+                return true;
+            });
         }
     }
 
@@ -221,7 +211,7 @@ public class FragmentSettings extends PreferenceFragmentCompat implements Shared
             findPreference("shareapp_package").setSummary(getPreferenceManager().getSharedPreferences().getString("shareapp_package", ""));
 
         Preference batPref = getPreferenceScreen().findPreference(getString(R.string.key_ignore_battery_optimization));
-        if (batPref != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) { // the second condition should already follow from the first
+        if (batPref != null) {
             updateBatteryPrefDescription(batPref);
         }
     }

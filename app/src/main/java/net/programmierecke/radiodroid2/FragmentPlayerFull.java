@@ -7,7 +7,6 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.text.format.DateUtils;
@@ -474,11 +473,7 @@ public class FragmentPlayerFull extends Fragment {
                 flag.setBounds(0, 0, (int) (k * viewHeight), (int) viewHeight);
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                artAndInfoPagerAdapter.textViewStationDescription.setCompoundDrawablesRelative(flag, null, null, null);
-            } else {
-                artAndInfoPagerAdapter.textViewStationDescription.setCompoundDrawables(flag, null, null, null);
-            }
+            artAndInfoPagerAdapter.textViewStationDescription.setCompoundDrawablesRelative(flag, null, null, null);
 
             // TODO: add votes/clicks/trend
 

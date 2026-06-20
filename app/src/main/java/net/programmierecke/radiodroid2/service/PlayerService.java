@@ -22,7 +22,6 @@ import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.media.audiofx.AudioEffect;
 import android.net.wifi.WifiManager;
-import android.os.Build;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.IBinder;
@@ -154,7 +153,7 @@ public class PlayerService extends JobIntentService implements RadioPlayer.Playe
 
     private boolean notificationIsActive = false;
 
-    final int pendingIntentFlag =  Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0;
+    final int pendingIntentFlag = PendingIntent.FLAG_IMMUTABLE;
 
     void sendBroadCast(String action) {
         Intent local = new Intent();
@@ -478,15 +477,13 @@ public class PlayerService extends JobIntentService implements RadioPlayer.Playe
         registerReceiver(headsetConnectionReceiver, headsetConnectionFilter);
 
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel notificationChannel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, "RadioDroid2 Player", NotificationManager.IMPORTANCE_LOW);
+        NotificationChannel notificationChannel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, "RadioDroid2 Player", NotificationManager.IMPORTANCE_LOW);
 
-            // Configure the notification channel.
-            notificationChannel.setDescription("Channel description");
-            notificationChannel.enableLights(false);
-            notificationChannel.enableVibration(false);
-            notificationManager.createNotificationChannel(notificationChannel);
-        }
+        // Configure the notification channel.
+        notificationChannel.setDescription("Channel description");
+        notificationChannel.enableLights(false);
+        notificationChannel.enableVibration(false);
+        notificationManager.createNotificationChannel(notificationChannel);
     }
 
     @Override
@@ -571,24 +568,22 @@ public class PlayerService extends JobIntentService implements RadioPlayer.Playe
         // Thus if we can show a notification - we always show it.
         if (showNotification && !notificationIsActive) {
             if (currentStation == null) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    // On Android O+ we MUST show notification if started via startForegroundService
+                // On Android O+ we MUST show notification if started via startForegroundService
 
-                    NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_ID,
-                            "Temporary", NotificationManager.IMPORTANCE_DEFAULT);
-                    ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).createNotificationChannel(channel);
-                    Notification notification = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-                            .setContentTitle("")
-                            .setContentText("").build();
-                    startForeground(NOTIFY_ID, notification);
-                    stopForeground(true);
-                } else {
-                    stopSelf();
-                    return START_NOT_STICKY;
-                }
+                NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_ID,
+                        "Temporary", NotificationManager.IMPORTANCE_DEFAULT);
+                ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).createNotificationChannel(channel);
+                Notification notification = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                        .setContentTitle("")
+                        .setContentText("").build();
+                startForeground(NOTIFY_ID, notification);
+                stopForeground(true);
             } else {
-                updateNotification(PlayState.Paused);
+                stopSelf();
+                return START_NOT_STICKY;
             }
+        } else {
+            updateNotification(PlayState.Paused);
         }
 
         return super.onStartCommand(intent, flags, startId);
@@ -859,11 +854,7 @@ public class PlayerService extends JobIntentService implements RadioPlayer.Playe
         WifiManager wm = (WifiManager) itsContext.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         if (wm != null) {
             if (wifiLock == null) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR1) {
-                    wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "PlayerService");
-                } else {
-                    wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL, "PlayerService");
-                }
+                wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "PlayerService");
             }
             if (!wifiLock.isHeld()) {
                 wifiLock.acquire();

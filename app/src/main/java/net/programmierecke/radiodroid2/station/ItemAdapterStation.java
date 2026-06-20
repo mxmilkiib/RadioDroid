@@ -14,7 +14,6 @@ import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
 
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.fragment.app.FragmentActivity;
@@ -368,11 +367,7 @@ public class ItemAdapterStation
             flag.setBounds(0, 0, (int) (k * viewHeight), (int) viewHeight);
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            holder.textViewShortDescription.setCompoundDrawablesRelative(flag, null, null, null);
-        } else {
-            holder.textViewShortDescription.setCompoundDrawables(flag, null, null, null);
-        }
+        holder.textViewShortDescription.setCompoundDrawablesRelative(flag, null, null, null);
 
         if (isExpanded) {
             holder.viewDetails = holder.stubDetails == null ? holder.viewDetails : holder.stubDetails.inflate();
@@ -405,8 +400,7 @@ public class ItemAdapterStation
                 });
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1
-                    && getContext().getApplicationContext().getSystemService(ShortcutManager.class).isRequestPinShortcutSupported()) {
+            if (getContext().getApplicationContext().getSystemService(ShortcutManager.class).isRequestPinShortcutSupported()) {
                 holder.buttonCreateShortcut.setVisibility(View.VISIBLE);
                 holder.buttonCreateShortcut.setOnClickListener(new View.OnClickListener() {
                     @Override

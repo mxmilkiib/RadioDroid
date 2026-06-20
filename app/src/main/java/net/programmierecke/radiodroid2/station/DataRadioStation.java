@@ -12,7 +12,6 @@ import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
-import android.os.Build;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -439,16 +438,14 @@ public class DataRadioStation implements Parcelable {
 
         @Override
         public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
-            if (Build.VERSION.SDK_INT >= 25) {
-                Intent playByUUIDintent = new Intent(MediaSessionCallback.ACTION_PLAY_STATION_BY_UUID, null, ctx, ActivityMain.class)
-                        .putExtra(MediaSessionCallback.EXTRA_STATION_UUID, station.StationUuid);
-                ShortcutInfo shortcut = new ShortcutInfo.Builder(ctx.getApplicationContext(), ctx.getPackageName() + "/" + station.StationUuid)
-                        .setShortLabel(station.Name)
-                        .setIcon(Icon.createWithBitmap(bitmap))
-                        .setIntent(playByUUIDintent)
-                        .build();
-                cb.onShortcutReadyListener(shortcut);
-            }
+            Intent playByUUIDintent = new Intent(MediaSessionCallback.ACTION_PLAY_STATION_BY_UUID, null, ctx, ActivityMain.class)
+                    .putExtra(MediaSessionCallback.EXTRA_STATION_UUID, station.StationUuid);
+            ShortcutInfo shortcut = new ShortcutInfo.Builder(ctx.getApplicationContext(), ctx.getPackageName() + "/" + station.StationUuid)
+                    .setShortLabel(station.Name)
+                    .setIcon(Icon.createWithBitmap(bitmap))
+                    .setIntent(playByUUIDintent)
+                    .build();
+            cb.onShortcutReadyListener(shortcut);
         }
 
         @Override
