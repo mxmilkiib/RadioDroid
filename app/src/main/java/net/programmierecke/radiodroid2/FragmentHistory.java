@@ -2,7 +2,6 @@ package net.programmierecke.radiodroid2;
 
 import android.content.Intent;
 import android.graphics.Color;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -24,9 +23,11 @@ import net.programmierecke.radiodroid2.station.DataRadioStation;
 import net.programmierecke.radiodroid2.interfaces.IAdapterRefreshable;
 import net.programmierecke.radiodroid2.station.StationActions;
 import net.programmierecke.radiodroid2.station.StationsFilter;
+import net.programmierecke.radiodroid2.utils.BackgroundTask;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Future;
 
 import okhttp3.OkHttpClient;
 
@@ -35,7 +36,7 @@ public class FragmentHistory extends Fragment implements IAdapterRefreshable {
 
     private RecyclerView rvStations;
     private SwipeRefreshLayout swipeRefreshLayout;
-    private AsyncTask task = null;
+    private Future<?> task = null;
 
     private HistoryManager historyManager;
 
@@ -144,39 +145,33 @@ public class FragmentHistory extends Fragment implements IAdapterRefreshable {
         }
         Log.d(TAG, "Search for items: "+listUUids.size());
 
-        task = new AsyncTask<Void, Void, List<DataRadioStation>>() {
-            @Override
-            protected List<DataRadioStation> doInBackground(Void... params) {
-                return Utils.getStationsByUuid(httpClient, getActivity(), listUUids);
-            }
-
-            @Override
-            protected void onPostExecute(List<DataRadioStation> result) {
-                DownloadFinished();
-                if(getContext() != null)
-                    LocalBroadcastManager.getInstance(getContext()).sendBroadcast(new Intent(ActivityMain.ACTION_HIDE_LOADING));
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "Download relativeUrl finished");
-                }
-                if (result != null) {
+        task = BackgroundTask.execute(
+                () -> Utils.getStationsByUuid(httpClient, getActivity(), listUUids),
+                result -> {
+                    DownloadFinished();
+                    if(getContext() != null)
+                        LocalBroadcastManager.getInstance(getContext()).sendBroadcast(new Intent(ActivityMain.ACTION_HIDE_LOADING));
                     if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "Download relativeUrl OK");
+                        Log.d(TAG, "Download relativeUrl finished");
                     }
-                    Log.d(TAG, "Found items: "+result.size());
-                    SyncList(result);
-                    RefreshListGui();
-                } else {
-                    try {
-                        Toast toast = Toast.makeText(getContext(), getResources().getText(R.string.error_list_update), Toast.LENGTH_SHORT);
-                        toast.show();
-                    }
-                    catch(Exception e){
-                        Log.e("ERR",e.toString());
+                    if (result != null) {
+                        if (BuildConfig.DEBUG) {
+                            Log.d(TAG, "Download relativeUrl OK");
+                        }
+                        Log.d(TAG, "Found items: "+result.size());
+                        SyncList(result);
+                        RefreshListGui();
+                    } else {
+                        try {
+                            Toast toast = Toast.makeText(getContext(), getResources().getText(R.string.error_list_update), Toast.LENGTH_SHORT);
+                            toast.show();
+                        }
+                        catch(Exception e){
+                            Log.e("ERR",e.toString());
+                        }
                     }
                 }
-                super.onPostExecute(result);
-            }
-        }.execute();
+        );
     }
 
     private void SyncList(List<DataRadioStation> list_new) {

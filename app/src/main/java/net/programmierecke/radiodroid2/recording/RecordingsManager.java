@@ -27,7 +27,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Observable;
+
+import net.programmierecke.radiodroid2.utils.ChangeNotifier;
 
 /* TODO: Actually have info about recording by storing them in the database and matching with files on disk.
  */
@@ -36,14 +37,7 @@ public class RecordingsManager {
     private DateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
     private DateFormat timeFormatter = new SimpleDateFormat("HH-mm", Locale.US);
 
-    private class RecordingsObservable extends Observable {
-        @Override
-        public synchronized boolean hasChanged() {
-            return true;
-        }
-    }
-
-    private Observable savedRecordingsObservable = new RecordingsObservable();
+    private final ChangeNotifier savedRecordingsNotifier = new ChangeNotifier();
 
     private class RunningRecordableListener implements RecordableListener {
         private RunningRecordingInfo runningRecordingInfo;
@@ -158,8 +152,8 @@ public class RecordingsManager {
         return new ArrayList<>(savedRecordings);
     }
 
-    public Observable getSavedRecordingsObservable() {
-        return savedRecordingsObservable;
+    public ChangeNotifier getSavedRecordingsNotifier() {
+        return savedRecordingsNotifier;
     }
 
     public static String getRecordDir() {
@@ -196,6 +190,6 @@ public class RecordingsManager {
             Log.e(TAG, "Could not enumerate files in recordings directory");
         }
 
-        savedRecordingsObservable.notifyObservers();
+        savedRecordingsNotifier.notifyListeners();
     }
 }

@@ -3,7 +3,6 @@ package net.programmierecke.radiodroid2;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -13,7 +12,10 @@ import androidx.fragment.app.Fragment;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.preference.PreferenceManager;
 
+import net.programmierecke.radiodroid2.utils.BackgroundTask;
+
 import java.util.HashMap;
+import java.util.concurrent.Future;
 
 import okhttp3.OkHttpClient;
 
@@ -25,7 +27,7 @@ public class FragmentBase extends Fragment {
 
     private boolean isCreated = false;
 
-    private AsyncTask task = null;
+    private Future<?> task = null;
 
     public FragmentBase() {
     }
@@ -106,40 +108,36 @@ public class FragmentBase extends Fragment {
                 RadioDroidApp radioDroidApp = (RadioDroidApp) getActivity().getApplication();
                 final OkHttpClient httpClient = radioDroidApp.getHttpClient();
 
-                task = new AsyncTask<Void, Void, String>() {
-                    @Override
-                    protected String doInBackground(Void... params) {
-                        HashMap<String, String> p = new HashMap<String, String>();
-                        p.put("hidebroken", ""+(!show_broken));
-                        return Utils.downloadFeedRelative(httpClient, getActivity(), relativeUrl, forceUpdate, p);
-                    }
-
-                    @Override
-                    protected void onPostExecute(String result) {
-                        DownloadFinished();
-                        if(getContext() != null)
-                            LocalBroadcastManager.getInstance(getContext()).sendBroadcast(new Intent(ActivityMain.ACTION_HIDE_LOADING));
-                        if (BuildConfig.DEBUG) {
-                            Log.d(TAG, "Download relativeUrl finished:" + relativeUrl);
-                        }
-                        if (result != null) {
+                task = BackgroundTask.execute(
+                        () -> {
+                            HashMap<String, String> p = new HashMap<String, String>();
+                            p.put("hidebroken", ""+(!show_broken));
+                            return Utils.downloadFeedRelative(httpClient, getActivity(), relativeUrl, forceUpdate, p);
+                        },
+                        result -> {
+                            DownloadFinished();
+                            if(getContext() != null)
+                                LocalBroadcastManager.getInstance(getContext()).sendBroadcast(new Intent(ActivityMain.ACTION_HIDE_LOADING));
                             if (BuildConfig.DEBUG) {
-                                Log.d(TAG, "Download relativeUrl OK:" + relativeUrl);
+                                Log.d(TAG, "Download relativeUrl finished:" + relativeUrl);
                             }
-                            urlResult = result;
-                            RefreshListGui();
-                        } else {
-                            try {
-                                Toast toast = Toast.makeText(getContext(), getResources().getText(R.string.error_list_update), Toast.LENGTH_SHORT);
-                                toast.show();
-                            }
-                            catch(Exception e){
-                                Log.e("ERR",e.toString());
+                            if (result != null) {
+                                if (BuildConfig.DEBUG) {
+                                    Log.d(TAG, "Download relativeUrl OK:" + relativeUrl);
+                                }
+                                urlResult = result;
+                                RefreshListGui();
+                            } else {
+                                try {
+                                    Toast toast = Toast.makeText(getContext(), getResources().getText(R.string.error_list_update), Toast.LENGTH_SHORT);
+                                    toast.show();
+                                }
+                                catch(Exception e){
+                                    Log.e("ERR",e.toString());
+                                }
                             }
                         }
-                        super.onPostExecute(result);
-                    }
-                }.execute();
+                );
             } else {
                 urlResult = cache;
                 DownloadFinished();

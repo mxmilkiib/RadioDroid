@@ -13,7 +13,6 @@ import android.media.AudioAttributes;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
-import android.os.AsyncTask;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.RemoteException;
@@ -31,6 +30,7 @@ import net.programmierecke.radiodroid2.R;
 import net.programmierecke.radiodroid2.RadioDroidApp;
 import net.programmierecke.radiodroid2.Utils;
 import net.programmierecke.radiodroid2.station.DataRadioStation;
+import net.programmierecke.radiodroid2.utils.BackgroundTask;
 
 import okhttp3.OkHttpClient;
 
@@ -143,79 +143,75 @@ public class AlarmReceiver extends BroadcastReceiver {
         RadioDroidApp radioDroidApp = (RadioDroidApp) context.getApplicationContext();
         final OkHttpClient httpClient = radioDroidApp.getHttpClient();
 
-        new AsyncTask<Void, Void, String>() {
-            @Override
-            protected String doInBackground(Void... params) {
-                String result = null;
-                for (int i=0;i<20;i++){
-                    result = Utils.getRealStationLink(httpClient, context, stationId);
-                    if (result != null){
-                        return result;
-                    }
-                    try {
-                        Thread.sleep(500);
-                    } catch (InterruptedException e) {
-                        Log.e(TAG,"Play() "+e);
-                    }
-                }
-                return result;
-            }
-
-            @Override
-            protected void onPostExecute(String result) {
-                if (result != null) {
-                    url = result;
-
-                    SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
-                    boolean play_external = sharedPref.getBoolean("alarm_external", false);
-                    String packageName = sharedPref.getString("shareapp_package",null);
-                    String activityName = sharedPref.getString("shareapp_activity",null);
-                    try {
-                        timeout = Integer.parseInt(sharedPref.getString("alarm_timeout", "10"));
-                    }catch(Exception e){
-                        timeout = 10;
-                    }
-                    try {
-                        if (play_external && packageName != null && activityName != null){
-                            Intent share = new Intent(Intent.ACTION_VIEW);
-                            share.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            share.setClassName(packageName,activityName);
-                            share.setDataAndType(Uri.parse(url), "audio/*");
-                            context.startActivity(share);
-                            if (wakeLock != null) {
-                                wakeLock.release();
-                                wakeLock = null;
-                            }
-                            if (wifiLock != null) {
-                                wifiLock.release();
-                                wifiLock = null;
-                            }
-                        } else {
-                            Intent anIntent = new Intent(context, PlayerService.class);
-                            context.getApplicationContext().bindService(anIntent, svcConn, context.BIND_AUTO_CREATE);
-                            context.getApplicationContext().startService(anIntent);
+        BackgroundTask.execute(
+                (java.util.concurrent.Callable<String>) () -> {
+                    String result = null;
+                    for (int i=0;i<20;i++){
+                        result = Utils.getRealStationLink(httpClient, context, stationId);
+                        if (result != null){
+                            return result;
                         }
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error starting alarm intent "+e);
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            Log.e(TAG,"Play() "+e);
+                        }
+                    }
+                    return result;
+                },
+                result -> {
+                    if (result != null) {
+                        url = result;
+
+                        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(context);
+                        boolean play_external = sharedPref.getBoolean("alarm_external", false);
+                        String packageName = sharedPref.getString("shareapp_package",null);
+                        String activityName = sharedPref.getString("shareapp_activity",null);
+                        try {
+                            timeout = Integer.parseInt(sharedPref.getString("alarm_timeout", "10"));
+                        }catch(Exception e){
+                            timeout = 10;
+                        }
+                        try {
+                            if (play_external && packageName != null && activityName != null){
+                                Intent share = new Intent(Intent.ACTION_VIEW);
+                                share.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                share.setClassName(packageName,activityName);
+                                share.setDataAndType(Uri.parse(url), "audio/*");
+                                context.startActivity(share);
+                                if (wakeLock != null) {
+                                    wakeLock.release();
+                                    wakeLock = null;
+                                }
+                                if (wifiLock != null) {
+                                    wifiLock.release();
+                                    wifiLock = null;
+                                }
+                            } else {
+                                Intent anIntent = new Intent(context, PlayerService.class);
+                                context.getApplicationContext().bindService(anIntent, svcConn, context.BIND_AUTO_CREATE);
+                                context.getApplicationContext().startService(anIntent);
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error starting alarm intent "+e);
+                            PlaySystemAlarm(context);
+                        }
+                    } else {
+                        Log.e(TAG, "Could not connect to radio station");
+                        Toast toast = Toast.makeText(context, context.getResources().getText(R.string.error_station_load), Toast.LENGTH_SHORT);
+                        toast.show();
                         PlaySystemAlarm(context);
-                    }
-                } else {
-                    Log.e(TAG, "Could not connect to radio station");
-                    Toast toast = Toast.makeText(context, context.getResources().getText(R.string.error_station_load), Toast.LENGTH_SHORT);
-                    toast.show();
-                    PlaySystemAlarm(context);
-                    if (wakeLock != null) {
-                        wakeLock.release();
-                        wakeLock = null;
-                    }
-                    if (wifiLock != null) {
-                        wifiLock.release();
-                        wifiLock = null;
+                        if (wakeLock != null) {
+                            wakeLock.release();
+                            wakeLock = null;
+                        }
+                        if (wifiLock != null) {
+                            wifiLock.release();
+                            wifiLock = null;
+                        }
                     }
                 }
-                super.onPostExecute(result);
-            }
-        }.execute();
+        );
     }
 
     private void PlaySystemAlarm(Context context) {

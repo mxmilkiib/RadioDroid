@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.os.AsyncTask;
 import android.os.Bundle;
 
 import com.google.android.material.snackbar.BaseTransientBottomBar;
@@ -33,23 +32,24 @@ import net.programmierecke.radiodroid2.station.ItemAdapterIconOnlyStation;
 import net.programmierecke.radiodroid2.interfaces.IAdapterRefreshable;
 import net.programmierecke.radiodroid2.station.StationActions;
 import net.programmierecke.radiodroid2.station.StationsFilter;
+import net.programmierecke.radiodroid2.utils.BackgroundTask;
+import net.programmierecke.radiodroid2.utils.ChangeNotifier;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.Observable;
-import java.util.Observer;
+import java.util.concurrent.Future;
 
 import okhttp3.OkHttpClient;
 
-public class FragmentStarred extends Fragment implements IAdapterRefreshable, Observer {
+public class FragmentStarred extends Fragment implements IAdapterRefreshable, ChangeNotifier.ChangeListener {
     private static final String TAG = "FragmentStarred";
 
     private RecyclerView rvStations;
     private SwipeRefreshLayout swipeRefreshLayout;
-    private AsyncTask task = null;
+    private Future<?> task = null;
 
     private FavouriteManager favouriteManager;
 
@@ -74,7 +74,7 @@ public class FragmentStarred extends Fragment implements IAdapterRefreshable, Ob
 
         RadioDroidApp radioDroidApp = (RadioDroidApp) requireActivity().getApplication();
         favouriteManager = radioDroidApp.getFavouriteManager();
-        favouriteManager.addObserver(this);
+        favouriteManager.addListener(this);
 
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_stations, container, false);
@@ -126,7 +126,7 @@ public class FragmentStarred extends Fragment implements IAdapterRefreshable, Ob
                 // We don't want to update RecyclerView during its layout process
                 requireView().post(() -> {
                     favouriteManager.Save();
-                    favouriteManager.notifyObservers();
+                    favouriteManager.notifyListeners();
                 });
             }
         });
@@ -160,39 +160,33 @@ public class FragmentStarred extends Fragment implements IAdapterRefreshable, Ob
         }
         Log.d(TAG, "Search for items: "+listUUids.size());
 
-        task = new AsyncTask<Void, Void, List<DataRadioStation>>() {
-            @Override
-            protected List<DataRadioStation> doInBackground(Void... params) {
-                return Utils.getStationsByUuid(httpClient, getActivity(), listUUids);
-            }
-
-            @Override
-            protected void onPostExecute(List<DataRadioStation> result) {
-                DownloadFinished();
-                if(getContext() != null)
-                    LocalBroadcastManager.getInstance(getContext()).sendBroadcast(new Intent(ActivityMain.ACTION_HIDE_LOADING));
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "Download relativeUrl finished");
-                }
-                if (result != null) {
+        task = BackgroundTask.execute(
+                () -> Utils.getStationsByUuid(httpClient, getActivity(), listUUids),
+                result -> {
+                    DownloadFinished();
+                    if(getContext() != null)
+                        LocalBroadcastManager.getInstance(getContext()).sendBroadcast(new Intent(ActivityMain.ACTION_HIDE_LOADING));
                     if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "Download relativeUrl OK");
+                        Log.d(TAG, "Download relativeUrl finished");
                     }
-                    Log.d(TAG, "Found items: "+result.size());
-                    SyncList(result);
-                    RefreshListGui();
-                } else {
-                    try {
-                        Toast toast = Toast.makeText(getContext(), getResources().getText(R.string.error_list_update), Toast.LENGTH_SHORT);
-                        toast.show();
-                    }
-                    catch(Exception e){
-                        Log.e("ERR",e.toString());
+                    if (result != null) {
+                        if (BuildConfig.DEBUG) {
+                            Log.d(TAG, "Download relativeUrl OK");
+                        }
+                        Log.d(TAG, "Found items: "+result.size());
+                        SyncList(result);
+                        RefreshListGui();
+                    } else {
+                        try {
+                            Toast toast = Toast.makeText(getContext(), getResources().getText(R.string.error_list_update), Toast.LENGTH_SHORT);
+                            toast.show();
+                        }
+                        catch(Exception e){
+                            Log.e("ERR",e.toString());
+                        }
                     }
                 }
-                super.onPostExecute(result);
-            }
-        }.execute();
+        );
     }
 
     private void SyncList(List<DataRadioStation> list_new) {
@@ -234,11 +228,11 @@ public class FragmentStarred extends Fragment implements IAdapterRefreshable, Ob
 
         RadioDroidApp radioDroidApp = (RadioDroidApp) requireActivity().getApplication();
         favouriteManager = radioDroidApp.getFavouriteManager();
-        favouriteManager.deleteObserver(this);
+        favouriteManager.removeListener(this);
     }
 
     @Override
-    public void update(Observable o, Object arg) {
+    public void onChanged() {
         RefreshListGui();
     }
 }

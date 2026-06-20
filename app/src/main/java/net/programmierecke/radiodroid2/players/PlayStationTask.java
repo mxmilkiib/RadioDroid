@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -23,10 +22,12 @@ import net.programmierecke.radiodroid2.players.mpd.MPDClient;
 import net.programmierecke.radiodroid2.players.mpd.MPDServerData;
 import net.programmierecke.radiodroid2.players.mpd.tasks.MPDPlayTask;
 import net.programmierecke.radiodroid2.station.DataRadioStation;
+import net.programmierecke.radiodroid2.utils.BackgroundTask;
 
 import java.lang.ref.WeakReference;
+import java.util.concurrent.Future;
 
-public class PlayStationTask extends AsyncTask<Void, Void, String> {
+public class PlayStationTask {
     public interface PlayFunc {
         void play(String url);
     }
@@ -44,6 +45,8 @@ public class PlayStationTask extends AsyncTask<Void, Void, String> {
     private PostExecuteTask postExecuteTask;
     private DataRadioStation stationToPlay;
     private WeakReference<Context> contextWeakReference;
+    private Future<?> future;
+    private boolean cancelled = false;
 
     public PlayStationTask(@NonNull DataRadioStation stationToPlay, @NonNull Context ctx,
                            @NonNull PlayFunc playFunc, @Nullable PostExecuteTask postExecuteTask) {
@@ -71,10 +74,7 @@ public class PlayStationTask extends AsyncTask<Void, Void, String> {
         return new PlayStationTask(stationToPlay, ctx, url -> castHandler.playRemote(stationToPlay.Name, url, stationToPlay.IconUrl), null);
     }
 
-    @Override
-    protected void onPreExecute() {
-        super.onPreExecute();
-
+    private void onPreExecute() {
         Context ctx = contextWeakReference.get();
         if (ctx == null) {
             return;
@@ -100,30 +100,35 @@ public class PlayStationTask extends AsyncTask<Void, Void, String> {
         }
     }
 
-    @Override
-    protected String doInBackground(Void... params) {
-        Context ctx = contextWeakReference.get();
-        if (ctx != null) {
-            RadioDroidApp radioDroidApp = (RadioDroidApp) ctx.getApplicationContext();
+    public void execute() {
+        onPreExecute();
 
-            if (!stationToPlay.hasValidUuid()) {
-                if (!stationToPlay.refresh(radioDroidApp.getHttpClient(), ctx)) {
-                    return null;
-                }
-            }
+        future = BackgroundTask.execute(
+                () -> {
+                    Context ctx = contextWeakReference.get();
+                    if (ctx != null) {
+                        RadioDroidApp radioDroidApp = (RadioDroidApp) ctx.getApplicationContext();
 
-            if (isCancelled()) {
-                return null;
-            }
+                        if (!stationToPlay.hasValidUuid()) {
+                            if (!stationToPlay.refresh(radioDroidApp.getHttpClient(), ctx)) {
+                                return null;
+                            }
+                        }
 
-            return Utils.getRealStationLink(radioDroidApp.getHttpClient(), ctx.getApplicationContext(), stationToPlay.StationUuid);
-        } else {
-            return null;
-        }
+                        if (cancelled) {
+                            return null;
+                        }
+
+                        return Utils.getRealStationLink(radioDroidApp.getHttpClient(), ctx.getApplicationContext(), stationToPlay.StationUuid);
+                    } else {
+                        return null;
+                    }
+                },
+                result -> onPostExecute(result)
+        );
     }
 
-    @Override
-    protected void onPostExecute(String result) {
+    private void onPostExecute(String result) {
         Context ctx = contextWeakReference.get();
         if (ctx == null) {
             return;
@@ -144,7 +149,12 @@ public class PlayStationTask extends AsyncTask<Void, Void, String> {
         if (postExecuteTask != null) {
             postExecuteTask.onPostExecute(result != null ? ExecutionResult.SUCCESS : ExecutionResult.FAILURE);
         }
+    }
 
-        super.onPostExecute(result);
+    public void cancel(boolean mayInterruptIfRunning) {
+        cancelled = true;
+        if (future != null) {
+            future.cancel(mayInterruptIfRunning);
+        }
     }
 }

@@ -8,7 +8,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -32,6 +31,7 @@ import net.programmierecke.radiodroid2.RadioDroidApp;
 import net.programmierecke.radiodroid2.Utils;
 import net.programmierecke.radiodroid2.alarm.TimePickerFragment;
 import net.programmierecke.radiodroid2.players.selector.PlayerType;
+import net.programmierecke.radiodroid2.utils.BackgroundTask;
 import net.programmierecke.radiodroid2.views.ItemListDialog;
 
 import java.lang.ref.WeakReference;
@@ -81,49 +81,43 @@ public class StationActions {
 
         final WeakReference<Context> contextRef = new WeakReference<>(context);
 
-        new AsyncTask<Void, Void, String>() {
-            @Override
-            protected String doInBackground(Void... params) {
-                Context ctx = contextRef.get();
-                if (ctx == null) {
-                    return null;
-                }
-
-                final RadioDroidApp radioDroidApp = (RadioDroidApp) ctx.getApplicationContext();
-                final OkHttpClient httpClient = radioDroidApp.getHttpClient();
-
-                return Utils.getRealStationLink(httpClient, radioDroidApp, station.StationUuid);
-            }
-
-            @Override
-            protected void onPostExecute(String result) {
-                Context ctx = contextRef.get();
-                if (ctx == null) {
-                    super.onPostExecute(result);
-                    return;
-                }
-
-                LocalBroadcastManager.getInstance(ctx).sendBroadcast(new Intent(ActivityMain.ACTION_HIDE_LOADING));
-
-                if (result != null) {
-                    ClipboardManager clipboard = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-                    if (clipboard != null) {
-                        ClipData clip = ClipData.newPlainText("Stream Url", result);
-                        clipboard.setPrimaryClip(clip);
-
-                        CharSequence toastText = ctx.getResources().getText(R.string.notify_stream_url_copied);
-                        Toast.makeText(ctx.getApplicationContext(), toastText, Toast.LENGTH_SHORT).show();
-                    } else {
-                        Log.e(TAG, "Clipboard is NULL!");
-                        // TODO: toast general error
+        BackgroundTask.execute(
+                () -> {
+                    Context ctx = contextRef.get();
+                    if (ctx == null) {
+                        return null;
                     }
-                } else {
-                    CharSequence toastText = ctx.getResources().getText(R.string.error_station_load);
-                    Toast.makeText(ctx.getApplicationContext(), toastText, Toast.LENGTH_SHORT).show();
+
+                    final RadioDroidApp radioDroidApp = (RadioDroidApp) ctx.getApplicationContext();
+                    final OkHttpClient httpClient = radioDroidApp.getHttpClient();
+
+                    return Utils.getRealStationLink(httpClient, radioDroidApp, station.StationUuid);
+                },
+                result -> {
+                    Context ctx = contextRef.get();
+                    if (ctx == null) {
+                        return;
+                    }
+
+                    LocalBroadcastManager.getInstance(ctx).sendBroadcast(new Intent(ActivityMain.ACTION_HIDE_LOADING));
+
+                    if (result != null) {
+                        ClipboardManager clipboard = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (clipboard != null) {
+                            ClipData clip = ClipData.newPlainText("Stream Url", result);
+                            clipboard.setPrimaryClip(clip);
+
+                            CharSequence toastText = ctx.getResources().getText(R.string.notify_stream_url_copied);
+                            Toast.makeText(ctx.getApplicationContext(), toastText, Toast.LENGTH_SHORT).show();
+                        } else {
+                            Log.e(TAG, "Clipboard is NULL!");
+                        }
+                    } else {
+                        CharSequence toastText = ctx.getResources().getText(R.string.error_station_load);
+                        Toast.makeText(ctx.getApplicationContext(), toastText, Toast.LENGTH_SHORT).show();
+                    }
                 }
-                super.onPostExecute(result);
-            }
-        }.execute();
+        );
     }
 
     public static void markAsFavourite(final @NonNull Context context, final @NonNull DataRadioStation station) {
@@ -157,45 +151,41 @@ public class StationActions {
 
         final WeakReference<Context> contextRef = new WeakReference<>(context);
 
-        new AsyncTask<Void, Void, String>() {
-            @Override
-            protected String doInBackground(Void... params) {
-                Context ctx = contextRef.get();
-                if (ctx == null) {
-                    return null;
+        BackgroundTask.execute(
+                () -> {
+                    Context ctx = contextRef.get();
+                    if (ctx == null) {
+                        return null;
+                    }
+
+                    final RadioDroidApp radioDroidApp = (RadioDroidApp) ctx.getApplicationContext();
+                    final OkHttpClient httpClient = radioDroidApp.getHttpClient();
+
+                    return Utils.getRealStationLink(httpClient, radioDroidApp, station.StationUuid);
+                },
+                result -> {
+                    Context ctx = contextRef.get();
+                    if (ctx == null) {
+                        return;
+                    }
+
+                    LocalBroadcastManager.getInstance(ctx).sendBroadcast(new Intent(ActivityMain.ACTION_HIDE_LOADING));
+
+                    if (result != null) {
+                        Intent share = new Intent(Intent.ACTION_SEND);
+                        share.setType("text/plain");
+                        share.putExtra(Intent.EXTRA_SUBJECT, station.Name);
+                        share.putExtra(Intent.EXTRA_TEXT, result);
+                        String title = ctx.getResources().getString(R.string.share_action);
+                        Intent chooser = Intent.createChooser(share, title);
+
+                        ctx.startActivity(chooser);
+                    } else {
+                        Toast toast = Toast.makeText(ctx.getApplicationContext(), ctx.getResources().getText(R.string.error_station_load), Toast.LENGTH_SHORT);
+                        toast.show();
+                    }
                 }
-
-                final RadioDroidApp radioDroidApp = (RadioDroidApp) ctx.getApplicationContext();
-                final OkHttpClient httpClient = radioDroidApp.getHttpClient();
-
-                return Utils.getRealStationLink(httpClient, radioDroidApp, station.StationUuid);
-            }
-
-            @Override
-            protected void onPostExecute(String result) {
-                Context ctx = contextRef.get();
-                if (ctx == null) {
-                    return;
-                }
-
-                LocalBroadcastManager.getInstance(ctx).sendBroadcast(new Intent(ActivityMain.ACTION_HIDE_LOADING));
-
-                if (result != null) {
-                    Intent share = new Intent(Intent.ACTION_SEND);
-                    share.setType("text/plain");
-                    share.putExtra(Intent.EXTRA_SUBJECT, station.Name);
-                    share.putExtra(Intent.EXTRA_TEXT, result);
-                    String title = ctx.getResources().getString(R.string.share_action);
-                    Intent chooser = Intent.createChooser(share, title);
-
-                    ctx.startActivity(chooser);
-                } else {
-                    Toast toast = Toast.makeText(ctx.getApplicationContext(), ctx.getResources().getText(R.string.error_station_load), Toast.LENGTH_SHORT);
-                    toast.show();
-                }
-                super.onPostExecute(result);
-            }
-        }.execute();
+        );
     }
 
     public static void playInRadioDroid(final @NonNull Context context, final @NonNull DataRadioStation station) {
@@ -208,24 +198,19 @@ public class StationActions {
     private static void vote(final @NonNull Context context, final @NonNull DataRadioStation station) {
         final WeakReference<Context> contextRef = new WeakReference<>(context);
 
-        new AsyncTask<Void, Void, String>() {
-            @Override
-            protected String doInBackground(Void... params) {
-                Context ctx = contextRef.get();
-                if (ctx == null) {
-                    return null;
-                }
+        BackgroundTask.execute(
+                () -> {
+                    Context ctx = contextRef.get();
+                    if (ctx == null) {
+                        return null;
+                    }
 
-                final RadioDroidApp radioDroidApp = (RadioDroidApp) ctx.getApplicationContext();
-                final OkHttpClient httpClient = radioDroidApp.getHttpClient();
+                    final RadioDroidApp radioDroidApp = (RadioDroidApp) ctx.getApplicationContext();
+                    final OkHttpClient httpClient = radioDroidApp.getHttpClient();
 
-                return Utils.downloadFeedRelative(httpClient, ctx, "json/vote/" + station.StationUuid, true, null);
-            }
-
-            @Override
-            protected void onPostExecute(String result) {
-                super.onPostExecute(result);
-            }
-        }.execute();
+                    return Utils.downloadFeedRelative(httpClient, ctx, "json/vote/" + station.StationUuid, true, null);
+                },
+                result -> {}
+        );
     }
 }

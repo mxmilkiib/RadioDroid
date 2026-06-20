@@ -15,7 +15,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
-import java.util.Observable;
+
+import net.programmierecke.radiodroid2.utils.ChangeNotifier;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -28,14 +29,7 @@ public class RadioAlarmManager {
     final int pendingIntentFlag = PendingIntent.FLAG_IMMUTABLE;
 
 
-    private class AlarmsObservable extends Observable {
-        @Override
-        public synchronized boolean hasChanged() {
-            return true;
-        }
-    }
-
-    private Observable savedAlarmsObservable = new AlarmsObservable();
+    private final ChangeNotifier savedAlarmsNotifier = new ChangeNotifier();
 
     public RadioAlarmManager(Context context){
         this.context = context;
@@ -52,8 +46,8 @@ public class RadioAlarmManager {
 //        sharedPref.registerOnSharedPreferenceChangeListener(listener);
     }
 
-    public Observable getSavedAlarmsObservable() {
-        return savedAlarmsObservable;
+    public ChangeNotifier getSavedAlarmsNotifier() {
+        return savedAlarmsNotifier;
     }
 
     public void add(DataRadioStation station, int hour, int minute){
@@ -121,7 +115,7 @@ public class RadioAlarmManager {
         editor.putString("alarm.ids",items);
         editor.apply();
 
-        savedAlarmsObservable.notifyObservers();
+        savedAlarmsNotifier.notifyListeners();
     }
 
     public void load(){

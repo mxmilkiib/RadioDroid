@@ -13,14 +13,13 @@ import androidx.fragment.app.Fragment;
 
 import net.programmierecke.radiodroid2.R;
 import net.programmierecke.radiodroid2.RadioDroidApp;
-
-import java.util.Observer;
+import net.programmierecke.radiodroid2.utils.ChangeNotifier;
 
 public class FragmentAlarm extends Fragment implements TimePickerDialog.OnTimeSetListener {
     private RadioAlarmManager ram;
     private ItemAdapterRadioAlarm adapterRadioAlarm;
     private ListView lvAlarms;
-    private Observer alarmsObserver;
+    private ChangeNotifier.ChangeListener alarmsObserver;
 
     public FragmentAlarm() {
     }
@@ -45,7 +44,7 @@ public class FragmentAlarm extends Fragment implements TimePickerDialog.OnTimeSe
             }
         });
 
-        alarmsObserver = (o, arg) -> RefreshListAndView();
+        alarmsObserver = () -> RefreshListAndView();
 
         return view;
     }
@@ -56,14 +55,14 @@ public class FragmentAlarm extends Fragment implements TimePickerDialog.OnTimeSe
 
         RefreshListAndView();
 
-        ram.getSavedAlarmsObservable().addObserver(alarmsObserver);
+        ram.getSavedAlarmsNotifier().addListener(alarmsObserver);
     }
 
     @Override
     public void onPause() {
         super.onPause();
 
-        ram.getSavedAlarmsObservable().deleteObserver(alarmsObserver);
+        ram.getSavedAlarmsNotifier().removeListener(alarmsObserver);
     }
 
     private void RefreshListAndView() {

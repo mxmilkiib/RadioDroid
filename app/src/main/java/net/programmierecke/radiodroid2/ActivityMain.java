@@ -10,7 +10,6 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
 import android.text.TextUtils;
@@ -66,6 +65,7 @@ import net.programmierecke.radiodroid2.service.PlayerService;
 import net.programmierecke.radiodroid2.service.PlayerServiceUtil;
 import net.programmierecke.radiodroid2.station.DataRadioStation;
 import net.programmierecke.radiodroid2.station.StationsFilter;
+import net.programmierecke.radiodroid2.utils.BackgroundTask;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -511,26 +511,21 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
             RadioDroidApp radioDroidApp = (RadioDroidApp) getApplication();
             final OkHttpClient httpClient = radioDroidApp.getHttpClient();
 
-            new AsyncTask<Void, Void, DataRadioStation>() {
-                @Override
-                protected DataRadioStation doInBackground(Void... params) {
-                    return Utils.getStationByUuid(httpClient, context, stationUUID);
-                }
+            BackgroundTask.execute(
+                    () -> Utils.getStationByUuid(httpClient, context, stationUUID),
+                    station -> {
+                        if (!isFinishing()) {
+                            if (station != null) {
+                                Utils.showPlaySelection(radioDroidApp, station, getSupportFragmentManager());
 
-                @Override
-                protected void onPostExecute(DataRadioStation station) {
-                    if (!isFinishing()) {
-                        if (station != null) {
-                            Utils.showPlaySelection(radioDroidApp, station, getSupportFragmentManager());
-
-                            Fragment currentFragment = mFragmentManager.getFragments().get(mFragmentManager.getFragments().size() - 1);
-                            if (currentFragment instanceof FragmentHistory) {
-                                ((FragmentHistory) currentFragment).RefreshListGui();
+                                Fragment currentFragment = mFragmentManager.getFragments().get(mFragmentManager.getFragments().size() - 1);
+                                if (currentFragment instanceof FragmentHistory) {
+                                    ((FragmentHistory) currentFragment).RefreshListGui();
+                                }
                             }
                         }
                     }
-                }
-            }.execute();
+            );
         } else {
             final String searchTag = extras.getString(EXTRA_SEARCH_TAG);
             Log.d("MAIN","received search request for tag 1: "+searchTag);

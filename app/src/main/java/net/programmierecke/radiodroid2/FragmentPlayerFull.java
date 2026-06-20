@@ -65,7 +65,8 @@ import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Observable;
+
+import net.programmierecke.radiodroid2.utils.ChangeNotifier;
 
 public class FragmentPlayerFull extends Fragment {
     private final String TAG = "FragmentPlayerFull";
@@ -96,10 +97,10 @@ public class FragmentPlayerFull extends Fragment {
     private StreamLiveInfo lastLiveInfoForTrackMetadata = null;
 
     private RecordingsManager recordingsManager;
-    private java.util.Observer recordingsObserver;
+    private ChangeNotifier.ChangeListener recordingsObserver;
 
     private FavouriteManager favouriteManager;
-    private FavouritesObserver favouritesObserver = new FavouritesObserver();
+    private ChangeNotifier.ChangeListener favouritesObserver = new FavouritesObserver();
 
     private TrackHistoryRepository trackHistoryRepository;
     private TrackHistoryAdapter trackHistoryAdapter;
@@ -140,7 +141,7 @@ public class FragmentPlayerFull extends Fragment {
         RadioDroidApp radioDroidApp = (RadioDroidApp) requireActivity().getApplication();
 
         recordingsManager = radioDroidApp.getRecordingsManager();
-        recordingsObserver = (observable, o) -> updateRecordings();
+        recordingsObserver = () -> updateRecordings();
 
         favouriteManager = radioDroidApp.getFavouriteManager();
 
@@ -403,9 +404,9 @@ public class FragmentPlayerFull extends Fragment {
 
         LocalBroadcastManager.getInstance(requireContext()).registerReceiver(updateUIReceiver, filter);
 
-        recordingsManager.getSavedRecordingsObservable().addObserver(recordingsObserver);
+        recordingsManager.getSavedRecordingsNotifier().addListener(recordingsObserver);
 
-        favouriteManager.addObserver(favouritesObserver);
+        favouriteManager.addListener(favouritesObserver);
     }
 
     private void stopUpdating() {
@@ -421,9 +422,9 @@ public class FragmentPlayerFull extends Fragment {
 
         LocalBroadcastManager.getInstance(requireContext()).unregisterReceiver(updateUIReceiver);
 
-        recordingsManager.getSavedRecordingsObservable().deleteObserver(recordingsObserver);
+        recordingsManager.getSavedRecordingsNotifier().removeListener(recordingsObserver);
 
-        favouriteManager.deleteObserver(favouritesObserver);
+        favouriteManager.removeListener(favouritesObserver);
     }
 
     public void resetScroll() {
@@ -623,10 +624,10 @@ public class FragmentPlayerFull extends Fragment {
         }
     }
 
-    private class FavouritesObserver implements java.util.Observer {
+    private class FavouritesObserver implements ChangeNotifier.ChangeListener {
 
         @Override
-        public void update(Observable o, Object arg) {
+        public void onChanged() {
             updateFavouriteButton();
         }
     }

@@ -13,7 +13,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaDescriptionCompat;
@@ -32,6 +31,7 @@ import net.programmierecke.radiodroid2.R;
 import net.programmierecke.radiodroid2.RadioDroidApp;
 import net.programmierecke.radiodroid2.Utils;
 import net.programmierecke.radiodroid2.station.DataRadioStation;
+import net.programmierecke.radiodroid2.utils.BackgroundTask;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -39,6 +39,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import jp.wasabeef.picasso.transformations.CropCircleTransformation;
@@ -64,7 +65,7 @@ public class RadioDroidBrowser {
 
     private Map<String, DataRadioStation> stationIdToStation = new HashMap<>();
 
-    private static class RetrieveStationsIconAndSendResult extends AsyncTask<Void, Void, Void> {
+    private static class RetrieveStationsIconAndSendResult {
         private MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result;
         private List<DataRadioStation> stations;
         private WeakReference<Context> contextRef;
@@ -74,6 +75,7 @@ public class RadioDroidBrowser {
         private  Resources resources;
         // Picasso stores weak references to targets
         List<Target> imageLoadTargets = new ArrayList<>();
+        private Future<?> future;
 
         RetrieveStationsIconAndSendResult(MediaBrowserServiceCompat.Result<List<MediaBrowserCompat.MediaItem>> result, List<DataRadioStation> stations, Context context) {
             this.result = result;
@@ -82,8 +84,28 @@ public class RadioDroidBrowser {
             resources = context.getApplicationContext().getResources();
         }
 
-        @Override
-        protected void onPreExecute() {
+        void execute() {
+            onPreExecute();
+            future = BackgroundTask.execute(
+                    (java.util.concurrent.Callable<Void>) () -> {
+                        try {
+                            countDownLatch.await(IMAGE_LOAD_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    },
+                    aVoid -> onPostExecute()
+            );
+        }
+
+        void cancel(boolean mayInterruptIfRunning) {
+            if (future != null) {
+                future.cancel(mayInterruptIfRunning);
+            }
+        }
+
+        private void onPreExecute() {
             countDownLatch = new CountDownLatch(stations.size());
 
             for (final DataRadioStation station : stations) {
@@ -120,24 +142,18 @@ public class RadioDroidBrowser {
                         .resize(128, 128)
                         .into(imageLoadTarget);
             }
-
-            super.onPreExecute();
         }
 
-        @Override
-        protected Void doInBackground(Void... voids) {
+        private void doInBackground() {
             try {
                 countDownLatch.await(IMAGE_LOAD_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-
-            return null;
         }
 
 
-        @Override
-        protected void onPostExecute(Void aVoid) {
+        private void onPostExecute() {
             Context context = contextRef.get();
             if (context != null) {
                 for (Target target : imageLoadTargets) {
@@ -178,8 +194,6 @@ public class RadioDroidBrowser {
             }
 
             result.sendResult(mediaItems);
-
-            super.onPostExecute(aVoid);
         }
     }
 

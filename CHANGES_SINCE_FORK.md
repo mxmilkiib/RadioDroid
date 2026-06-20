@@ -68,3 +68,33 @@ All changes relative to upstream `4325633` (moved images to correct location).
 - Removed pre-JELLY_BEAN settings visibility check in `FragmentSettings`
 - Removed `>= M` battery optimization checks in `FragmentSettings`
 - Removed all now-unused `android.os.Build` imports across affected files
+
+## Observable/Observer Migration
+
+- Created `ChangeNotifier` helper class with a simple `ChangeListener` interface replacing deprecated `java.util.Observable`/`Observer`
+- `StationSaveManager`: extended `ChangeNotifier` instead of `Observable`; `notifyObservers()` calls replaced with `changeNotifier.notifyListeners()`
+- `FavouriteManager` inherits the new `addListener`/`removeListener`/`notifyListeners` API from `StationSaveManager`
+- `FragmentStarred`: implements `ChangeNotifier.ChangeListener` instead of `Observer`; `update()` replaced with `onChanged()`
+- `FragmentPlayerFull`: `FavouritesObserver` and `recordingsObserver` converted to `ChangeNotifier.ChangeListener`
+- `TvChannelManager`: implements `ChangeNotifier.ChangeListener` instead of `Observer`; `update()` replaced with `onChanged()`
+- `RadioAlarmManager`: inner `AlarmsObservable` class removed; uses `ChangeNotifier` directly; `getSavedAlarmsObservable()` replaced with `getSavedAlarmsNotifier()`
+- `RecordingsManager`: inner `RecordingsObservable` class removed; uses `ChangeNotifier` directly; `getSavedRecordingsObservable()` replaced with `getSavedRecordingsNotifier()`
+- `FragmentAlarm`: uses `ChangeNotifier.ChangeListener` instead of `Observer`
+- `RadioDroidApp`: `addObserver` call replaced with `addListener`
+
+## AsyncTask Migration
+
+- Created `BackgroundTask` helper class using `ExecutorService` (fixed thread pool) and `Handler` (main looper) to replace deprecated `android.os.AsyncTask`
+- `GetRealLinkAndPlayTask`: rewritten from `AsyncTask` to plain class with `execute()`/`cancel()` using `BackgroundTask`
+- `PlayStationTask`: rewritten from `AsyncTask` to plain class with `execute()`/`cancel()` using `BackgroundTask`
+- `StationActions`: three anonymous `AsyncTask` instances (clipboard copy, share, vote) converted to `BackgroundTask.execute()`
+- `RadioDroidBrowser`: `RetrieveStationsIconAndSendResult` converted from `AsyncTask` to plain class using `BackgroundTask`
+- `ProxySettingsDialog`: `ConnectionTesterTask` converted from `AsyncTask` to plain class using `BackgroundTask`
+- `AlarmReceiver`: anonymous `AsyncTask` in `Play()` converted to `BackgroundTask.execute()`
+- `StationSaveManager`: `AsyncTask` instances in `refreshStationsFromServer`, `SaveM3U`, `SaveM3USimple`, `LoadM3U`, `LoadM3USimple` converted to `BackgroundTask.execute()`
+- `FragmentStarred`: `AsyncTask` in `RefreshDownloadList` converted to `BackgroundTask.execute()`
+- `FragmentBase`: `AsyncTask` in `Download` converted to `BackgroundTask.execute()`
+- `FragmentHistory`: `AsyncTask` in `RefreshDownloadList` converted to `BackgroundTask.execute()`
+- `FragmentServerInfo`: `AsyncTask` in `Download` converted to `BackgroundTask.execute()`
+- `ActivityMain`: `AsyncTask` for station-by-UUID lookup converted to `BackgroundTask.execute()`
+- All `import android.os.AsyncTask` statements removed (except one in a commented-out block in `FragmentSettings`)

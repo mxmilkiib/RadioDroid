@@ -3,7 +3,6 @@ package net.programmierecke.radiodroid2.proxy;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -21,10 +20,12 @@ import androidx.preference.PreferenceManager;
 import net.programmierecke.radiodroid2.R;
 import net.programmierecke.radiodroid2.RadioDroidApp;
 import net.programmierecke.radiodroid2.Utils;
+import net.programmierecke.radiodroid2.utils.BackgroundTask;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.net.Proxy;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
@@ -47,7 +48,7 @@ public class ProxySettingsDialog extends DialogFragment {
 
     private ArrayAdapter<Proxy.Type> proxyTypeAdapter;
 
-    private AsyncTask<Void, Void, Void> proxyTestTask;
+    private Future<?> proxyTestTask;
 
     @NonNull
     @Override
@@ -143,7 +144,7 @@ public class ProxySettingsDialog extends DialogFragment {
         return settings;
     }
 
-    private static class ConnectionTesterTask extends AsyncTask<Void, Void, Void> {
+    private static class ConnectionTesterTask {
         private WeakReference<TextView> textProxyTestResult;
 
         private OkHttpClient okHttpClient;
@@ -155,6 +156,7 @@ public class ProxySettingsDialog extends DialogFragment {
 
         private boolean requestSucceeded = false;
         private String errorStr;
+        private Future<?> future;
 
         private ConnectionTesterTask(@NonNull RadioDroidApp radioDroidApp, @NonNull TextView textProxyTestResult,
                                      @NonNull ProxySettings proxySettings) {
@@ -178,39 +180,43 @@ public class ProxySettingsDialog extends DialogFragment {
             }
         }
 
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-
-            if (okHttpClient == null)
+        void execute() {
+            if (okHttpClient == null) {
+                onPostExecute();
                 return;
+            }
 
             Request.Builder builder = new Request.Builder().url(TEST_ADDRESS);
             call = okHttpClient.newCall(builder.build());
+
+            future = BackgroundTask.execute(
+                    (java.util.concurrent.Callable<Void>) () -> {
+                        try {
+                            Response response = call.execute();
+                            requestSucceeded = response.isSuccessful();
+                            if (!requestSucceeded) {
+                                errorStr = response.message();
+                            }
+                        } catch (IOException e) {
+                            requestSucceeded = false;
+                            errorStr = e.getMessage();
+                        }
+                        return null;
+                    },
+                    aVoid -> onPostExecute()
+            );
         }
 
-        @Override
-        protected Void doInBackground(Void... voids) {
-            if (okHttpClient == null)
-                return null;
-            try {
-                Response response = call.execute();
-                requestSucceeded = response.isSuccessful();
-                if (!requestSucceeded) {
-                    errorStr = response.message();
-                }
-            } catch (IOException e) {
-                requestSucceeded = false;
-                errorStr = e.getMessage();
+        void cancel(boolean mayInterruptIfRunning) {
+            if (call != null) {
+                call.cancel();
             }
-
-            return null;
+            if (future != null) {
+                future.cancel(mayInterruptIfRunning);
+            }
         }
 
-        @Override
-        protected void onPostExecute(Void v) {
-            super.onPostExecute(v);
-
+        private void onPostExecute() {
             TextView textResult = textProxyTestResult.get();
             if (textResult == null) {
                 return;
@@ -234,7 +240,8 @@ public class ProxySettingsDialog extends DialogFragment {
         }
 
         RadioDroidApp radioDroidApp = (RadioDroidApp) getActivity().getApplication();
-        proxyTestTask = new ConnectionTesterTask(radioDroidApp, textProxyTestResult, proxySettings);
-        proxyTestTask.execute();
+        ConnectionTesterTask task = new ConnectionTesterTask(radioDroidApp, textProxyTestResult, proxySettings);
+        task.execute();
+        proxyTestTask = task.future;
     }
 }
