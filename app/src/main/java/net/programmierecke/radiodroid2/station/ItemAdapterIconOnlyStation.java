@@ -92,7 +92,7 @@ public class ItemAdapterIconOnlyStation extends ItemAdapaterContextMenuStation i
             holder.frameLayout.setBackgroundColor(tv.data);
             holder.transparentImageView.setColorFilter(tv.data);
         } else {
-            getContext().getTheme().resolveAttribute(R.attr.boxBackgroundColor, tv, true);
+            getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.boxBackgroundColor, tv, true);
             holder.frameLayout.setBackgroundColor(tv.data);
         }
     }

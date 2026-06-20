@@ -8,6 +8,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.preference.PreferenceManager
 import com.github.zawadz88.materialpopupmenu.MaterialPopupMenu
 import com.github.zawadz88.materialpopupmenu.popupMenu
+import com.github.zawadz88.materialpopupmenu.R as MpmR
 import com.mikepenz.iconics.IconicsDrawable
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import com.mikepenz.iconics.typeface.library.googlematerial.GoogleMaterial
@@ -26,7 +27,7 @@ object StationPopupMenu {
         val gravity = if (view.y + view.height > view.rootView.height / 2) Gravity.TOP else Gravity.BOTTOM
         val popupMenu = popupMenu {
             dropdownGravity = gravity
-            style = if (Utils.isDarkTheme(context)) R.style.Widget_MPM_Menu_Dark else R.style.Widget_MPM_Menu
+            style = if (Utils.isDarkTheme(context)) MpmR.style.Widget_MPM_Menu_Dark else MpmR.style.Widget_MPM_Menu
             section {
                 if (play_external) {
                     item {

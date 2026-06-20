@@ -23,6 +23,8 @@ import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.ItemTouchHelper;
 
+
+
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -329,7 +331,7 @@ public class ItemAdapterStation
             holder.textViewTitle.setTextColor(tv.data);
             holder.textViewTitle.setTypeface(null, Typeface.BOLD);
         } else {
-            getContext().getTheme().resolveAttribute(R.attr.boxBackgroundColor, tv, true);
+            getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.boxBackgroundColor, tv, true);
             holder.textViewTitle.setTypeface(holder.textViewShortDescription.getTypeface());
             getContext().getTheme().resolveAttribute(R.attr.iconsInItemBackgroundColor, tv, true);
             holder.textViewTitle.setTextColor(tv.data);
