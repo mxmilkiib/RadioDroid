@@ -34,6 +34,9 @@
     <string name="action_delete_history">Delete history</string>
     <string name="action_delete_favorites">Delete favorites</string>
     <string name="action_delete_stream_history">Clear track history</string>
+    <string name="action_lock_favourites">Lock from deletion</string>
+    <string name="notify_favourites_locked">Favourites locked from deletion</string>
+    <string name="notify_favourites_unlocked">Favourites deletion unlocked</string>
     <string name="action_ok">OK</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_top_click">Top Click</string>

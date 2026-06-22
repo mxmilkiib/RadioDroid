@@ -74,6 +74,7 @@ public class ItemAdapterStation
     StationActionsListener stationActionsListener;
     private FilterListener filterListener;
     private boolean supportsStationRemoval = false;
+    private RecyclerItemSwipeHelper<StationViewHolder> swipeHelper;
     private StationsFilter.FilterType filterType = StationsFilter.FilterType.LOCAL;
 
     private boolean shouldLoadIcons;
@@ -209,7 +210,7 @@ public class ItemAdapterStation
         if (!supportsStationRemoval) {
             supportsStationRemoval = true;
 
-            RecyclerItemSwipeHelper<StationViewHolder> swipeHelper = new RecyclerItemSwipeHelper<>(getContext(), 0, ItemTouchHelper.LEFT + ItemTouchHelper.RIGHT, this);
+            swipeHelper = new RecyclerItemSwipeHelper<>(getContext(), 0, ItemTouchHelper.LEFT + ItemTouchHelper.RIGHT, this);
             new ItemTouchHelper(swipeHelper).attachToRecyclerView(recyclerView);
         }
     }
@@ -218,8 +219,14 @@ public class ItemAdapterStation
         if (!supportsStationRemoval) {
             supportsStationRemoval = true;
 
-            RecyclerItemMoveAndSwipeHelper<StationViewHolder> swipeAndMoveHelper = new RecyclerItemMoveAndSwipeHelper<>(getContext(), ItemTouchHelper.UP | ItemTouchHelper.DOWN, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT, this);
-            new ItemTouchHelper(swipeAndMoveHelper).attachToRecyclerView(recyclerView);
+            swipeHelper = new RecyclerItemMoveAndSwipeHelper<>(getContext(), ItemTouchHelper.UP | ItemTouchHelper.DOWN, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT, this);
+            new ItemTouchHelper(swipeHelper).attachToRecyclerView(recyclerView);
+        }
+    }
+
+    public void setSwipeEnabled(boolean enabled) {
+        if (swipeHelper != null) {
+            swipeHelper.setSwipeEnabled(enabled);
         }
     }
 

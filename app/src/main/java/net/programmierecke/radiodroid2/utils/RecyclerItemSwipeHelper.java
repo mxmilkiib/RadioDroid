@@ -27,12 +27,17 @@ public class RecyclerItemSwipeHelper<ViewHolderType extends SwipeableViewHolder>
 
     private SwipeCallback<ViewHolderType> swipeListener;
     private boolean swipeToDeleteIsEnabled;
+    private boolean swipeEnabled = true;
+    private int dragDirs;
+    private int swipeDirs;
     private IconicsDrawable icon;
     private final ColorDrawable background;
 
     public RecyclerItemSwipeHelper(Context context, int dragDirs, int swipeDirs, SwipeCallback<ViewHolderType> swipeListener) {
         super(dragDirs, swipeDirs);
         this.swipeListener = swipeListener;
+        this.dragDirs = dragDirs;
+        this.swipeDirs = swipeDirs;
         swipeToDeleteIsEnabled = ((swipeDirs & ItemTouchHelper.LEFT) > 0) || ((swipeDirs & ItemTouchHelper.RIGHT) > 0);
         background = new ColorDrawable(Utils.themeAttributeToColor(R.attr.swipeDeleteBackgroundColor, context, Color.RED));
         if (swipeToDeleteIsEnabled) {
@@ -117,6 +122,15 @@ public class RecyclerItemSwipeHelper<ViewHolderType extends SwipeableViewHolder>
         getDefaultUIUtil().onDraw(c, recyclerView, foregroundView, dX, dY,
                 actionState, isCurrentlyActive);
 
+    }
+
+    public void setSwipeEnabled(boolean enabled) {
+        this.swipeEnabled = enabled;
+    }
+
+    @Override
+    public int getMovementFlags(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+        return makeMovementFlags(dragDirs, swipeEnabled ? swipeDirs : 0);
     }
 
     @Override

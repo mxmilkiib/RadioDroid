@@ -62,4 +62,11 @@
         android:title="@string/action_delete"
         android:icon="@drawable/ic_delete_white_24dp"
         app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_lock_favourites"
+        android:title="@string/action_lock_favourites"
+        android:icon="@drawable/ic_lock_24dp"
+        android:checkable="true"
+        app:showAsAction="never" />
 </menu>
