@@ -137,6 +137,7 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
     MenuItem menuItemListView;
     MenuItem menuItemAddAlarm;
     MenuItem menuItemMpd;
+    MenuItem menuItemLockFavourites;
 
     private SharedPreferences sharedPref;
 
@@ -578,6 +579,7 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
         menuItemIconsView = menu.findItem(R.id.action_icons_view);
         menuItemAddAlarm = menu.findItem(R.id.action_add_alarm);
         menuItemMpd = menu.findItem(R.id.action_mpd);
+        menuItemLockFavourites = menu.findItem(R.id.action_lock_favourites);
         mSearchView = (SearchView) MenuItemCompat.getActionView(menuItemSearch);
         mSearchView.setOnQueryTextListener(this);
         mSearchView.setOnQueryTextFocusChangeListener(new View.OnFocusChangeListener() {
@@ -607,6 +609,7 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
         menuItemListView.setVisible(false);
         menuItemIconsView.setVisible(false);
         menuItemAddAlarm.setVisible(false);
+        menuItemLockFavourites.setVisible(false);
 
         boolean mpd_is_visible = false;
         RadioDroidApp radioDroidApp = (RadioDroidApp) getApplication();
@@ -640,6 +643,8 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
             } else {
                 menuItemDelete.setVisible(true).setTitle(R.string.action_delete_favorites);
             }
+            menuItemLockFavourites.setVisible(true);
+            menuItemLockFavourites.setChecked(sharedPref.getBoolean("lock_favourites", false));
             myToolbar.setTitle(R.string.nav_item_starred);
         } else if (selectedMenuItem == R.id.nav_item_history) {
             menuItemSleepTimer.setVisible(true);
@@ -849,6 +854,13 @@ public class ActivityMain extends AppCompatActivity implements SearchView.OnQuer
             TimePickerFragment newFragment = new TimePickerFragment();
             newFragment.setCallback(this);
             newFragment.show(getSupportFragmentManager(), "timePicker");
+            return true;
+        } else if (itemId == R.id.action_lock_favourites) {
+            boolean locked = !menuItemLockFavourites.isChecked();
+            menuItemLockFavourites.setChecked(locked);
+            sharedPref.edit().putBoolean("lock_favourites", locked).apply();
+            Toast.makeText(this, locked ? R.string.notify_favourites_locked : R.string.notify_favourites_unlocked, Toast.LENGTH_SHORT).show();
+            recreate();
             return true;
         }
         return super.onOptionsItemSelected(menuItem);

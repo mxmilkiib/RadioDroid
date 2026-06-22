@@ -105,6 +105,9 @@ public class FragmentStarred extends Fragment implements IAdapterRefreshable, Ch
             adapter.enableItemMoveAndRemoval(rvStations);
         }
 
+        boolean favouritesLocked = sharedPref.getBoolean("lock_favourites", false);
+        adapter.setSwipeEnabled(!favouritesLocked);
+
         adapter.setStationActionsListener(new ItemAdapterStation.StationActionsListener() {
             @Override
             public void onStationClick(DataRadioStation station, int pos) {
