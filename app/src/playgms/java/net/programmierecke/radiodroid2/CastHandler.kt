@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import androidx.preference.PreferenceManager
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaMetadata
 import com.google.android.gms.cast.framework.*
@@ -14,9 +15,12 @@ import com.google.android.gms.common.images.WebImage
 import net.programmierecke.radiodroid2.cast.CastAwareActivity
 import net.programmierecke.radiodroid2.service.PauseReason
 import net.programmierecke.radiodroid2.service.PlayerServiceUtil
+import org.json.JSONObject
 
 private sealed class CastState {
     abstract fun setActivity(activity: CastAwareActivity?)
+
+    abstract fun getContext(): Context?
 
     abstract fun onPause()
     abstract fun onResume()
@@ -32,6 +36,8 @@ private object CastUnavailable : CastState() {
     private const val TAG = "CastHandler.CastUnavailable"
     override fun setActivity(activity: CastAwareActivity?) {
     }
+
+    override fun getContext(): Context? = null
 
     override fun onPause() {
     }
@@ -66,6 +72,8 @@ private class CastAvailable(val castContext: CastContext,
         this.activity = activity
     }
 
+    override fun getContext(): Context? = activity as? Context
+
     override fun onPause() {
         sessionManager.removeSessionManagerListener(sessionManagerListener)
         castSession = null
@@ -85,6 +93,11 @@ private class CastAvailable(val castContext: CastContext,
             PlayerServiceUtil.pause(PauseReason.USER)
 
             val station = PlayerServiceUtil.getCurrentStation()!!
+            val ctx = activity as? Context
+            if (ctx != null) {
+                val prefs = PreferenceManager.getDefaultSharedPreferences(ctx.applicationContext)
+                visualize = prefs.getBoolean("cast_visualization", true)
+            }
             play(station.Name, station.playableUrl, station.IconUrl)
         }
     }
@@ -101,15 +114,31 @@ private class CastAvailable(val castContext: CastContext,
         invalidateOptions()
     }
 
+    private var visualize: Boolean = true
+
+    fun setVisualize(enabled: Boolean) {
+        visualize = enabled
+    }
+
     override fun play(title: String, url: String, iconurl: String?) {
         val movieMetadata = MediaMetadata(MediaMetadata.MEDIA_TYPE_MUSIC_TRACK)
         movieMetadata.putString(MediaMetadata.KEY_TITLE, title)
-        movieMetadata.addImage(WebImage(Uri.parse(iconurl)))
+        if (!iconurl.isNullOrEmpty()) {
+            movieMetadata.addImage(WebImage(Uri.parse(iconurl)))
+        }
+
+        val contentType = if (url.contains(".m3u8") || url.contains(".m3u"))
+            "application/vnd.apple.mpegurl"
+        else
+            "audio/mpeg"
+
+        val customData = JSONObject().put("visualize", visualize)
 
         val mediaInfo = MediaInfo.Builder(url)
                 .setStreamType(MediaInfo.STREAM_TYPE_LIVE)
-                .setContentType("audio/ogg")
+                .setContentType(contentType)
                 .setMetadata(movieMetadata)
+                .setCustomData(customData)
                 .build()
 
         castSession?.remoteMediaClient?.load(mediaInfo, true)
@@ -188,6 +217,13 @@ public class CastHandler {
 
     fun playRemote(title: String, url: String, iconurl: String?) {
         Log.i(TAG, title)
+
+        val ctx = castState.getContext()
+        if (ctx != null) {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx.applicationContext)
+            val shouldVisualize = prefs.getBoolean("cast_visualization", true)
+            (castState as? CastAvailable)?.setVisualize(shouldVisualize)
+        }
 
         castState.play(title, url, iconurl)
     }

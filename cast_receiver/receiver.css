@@ -1,0 +1,78 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: 'Roboto', sans-serif;
+}
+
+#loadingIndicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #1d6293;
+    font-size: 32px;
+    font-weight: 300;
+    z-index: 100;
+}
+
+#loadingIndicator.hidden {
+    display: none;
+}
+
+#visualizerCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0.85;
+}
+
+cast-media-player {
+    --buffering-spinner-color: #1d6293;
+    z-index: 2;
+}
+
+#bufferingOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+#bufferingOverlay.hidden {
+    display: none;
+}
+
+.spinner {
+    width: 64px;
+    height: 64px;
+    border: 6px solid rgba(29, 98, 147, 0.3);
+    border-top-color: #1d6293;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.buffering-text {
+    margin-top: 20px;
+    color: #fff;
+    font-size: 24px;
+    font-weight: 300;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

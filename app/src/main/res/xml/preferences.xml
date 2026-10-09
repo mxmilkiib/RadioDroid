@@ -167,6 +167,13 @@
         <Preference
             android:key="equalizer"
             android:title="@string/settings_equalizer" />
+
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="cast_visualization"
+            android:summaryOff="@string/settings_cast_visualization_off"
+            android:summaryOn="@string/settings_cast_visualization_on"
+            android:title="@string/settings_cast_visualization" />
     </PreferenceScreen>
 
     <PreferenceScreen android:title="@string/settings_alarm"

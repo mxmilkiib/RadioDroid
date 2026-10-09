@@ -157,6 +157,9 @@
     <string name="settings_play_external_desc_on">Play stations with external player</string>
     <string name="settings_play_external_desc_off">Play stations with RadioDroid</string>
     <string name="settings_equalizer">Equalizer</string>
+    <string name="settings_cast_visualization">Cast visualizer</string>
+    <string name="settings_cast_visualization_on">Show visualizer when casting</string>
+    <string name="settings_cast_visualization_off">No visualizer when casting</string>
 
     <string name="settings_connectivity">Connectivity</string>
     <string name="settings_connect_timeout">Connection timeout</string>
@@ -287,7 +290,7 @@
     <string name="icon_click_trend_stable">Popularity stable</string>
 
     <string name="media_route_menu_title">GoogleCast</string>
-    <string name="app_id">5A97BAE4</string>
+    <string name="app_id">F39A3F2E</string>
     <string name="app_name">RadioDroid</string>
 
     <string name="settings_mpd">Music Player Daemon</string>
