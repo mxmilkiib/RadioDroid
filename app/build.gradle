@@ -100,10 +100,25 @@ android {
         }
     }
 
+    signingConfigs {
+        release {
+            // Signing Details From Environment; unset means unsigned local builds
+            def keystorePath = System.getenv("RADIODROID_KEYSTORE")
+            if (keystorePath != null) {
+                storeFile file(keystorePath)
+                storePassword System.getenv("RADIODROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("RADIODROID_KEY_ALIAS")
+                keyPassword System.getenv("RADIODROID_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+            if (System.getenv("RADIODROID_KEYSTORE") != null) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     productFlavors {
