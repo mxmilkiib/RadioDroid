@@ -78,6 +78,11 @@ public class ExoPlayerWrapper implements PlayerWrapper, IcyDataSource.IcyDataSou
     private MediaSource audioSource;
 
     private Runnable fullStopTask;
+    private Runnable bufferingTimeoutTask;
+    private long bytesReceivedAtBufferingStart;
+    private long bufferingStartTimeMs;
+
+    private static final long BUFFERING_TIMEOUT_MS = 8000; // 8 seconds
 
     private final BroadcastReceiver networkChangedReceiver = new BroadcastReceiver() {
         @Override
@@ -110,6 +115,7 @@ public class ExoPlayerWrapper implements PlayerWrapper, IcyDataSource.IcyDataSou
         }
 
         cancelStopTask();
+        cancelBufferingTimeout();
 
         stateListener.onStateChanged(PlayState.PrePlaying);
 
@@ -164,6 +170,7 @@ public class ExoPlayerWrapper implements PlayerWrapper, IcyDataSource.IcyDataSou
         Log.i(TAG, "Pause. Stopping exoplayer.");
 
         cancelStopTask();
+        cancelBufferingTimeout();
 
         if (player != null) {
             context.unregisterReceiver(networkChangedReceiver);
@@ -178,6 +185,7 @@ public class ExoPlayerWrapper implements PlayerWrapper, IcyDataSource.IcyDataSou
         Log.i(TAG, "Stopping exoplayer.");
 
         cancelStopTask();
+        cancelBufferingTimeout();
 
         if (player != null) {
             context.unregisterReceiver(networkChangedReceiver);
@@ -245,7 +253,7 @@ public class ExoPlayerWrapper implements PlayerWrapper, IcyDataSource.IcyDataSou
 
     @Override
     public void onDataSourceConnectionLost() {
-
+        Log.i(TAG, "Connection lost. Attempting reconnection.");
     }
 
     @Override
@@ -283,6 +291,11 @@ public class ExoPlayerWrapper implements PlayerWrapper, IcyDataSource.IcyDataSou
     @Override
     public void onDataSourceConnectionLostIrrecoverably() {
         Log.i(TAG, "Connection lost irrecoverably.");
+        playerThreadHandler.post(() -> {
+            cancelBufferingTimeout();
+            stop();
+            stateListener.onPlayerError(R.string.error_stream_connection_lost, "Data source gave up reconnecting");
+        });
     }
 
     void resumeWhenNetworkConnected() {
@@ -301,17 +314,17 @@ public class ExoPlayerWrapper implements PlayerWrapper, IcyDataSource.IcyDataSou
 
                 fullStopTask = () -> {
                     stop();
-                    stateListener.onPlayerError(R.string.giving_up_resume);
+                    stateListener.onPlayerError(R.string.giving_up_resume, null);
 
                     ExoPlayerWrapper.this.fullStopTask = null;
                 };
                 playerThreadHandler.postDelayed(fullStopTask, resumeWithin * 1000L);
 
-                stateListener.onPlayerWarning(R.string.warning_no_network_trying_resume);
+                stateListener.onPlayerWarning(R.string.warning_no_network_trying_resume, null);
             } else {
                 stop();
 
-                stateListener.onPlayerError(R.string.error_stream_reconnect_timeout);
+                stateListener.onPlayerError(R.string.error_stream_reconnect_timeout, null);
             }
         });
     }
@@ -333,6 +346,36 @@ public class ExoPlayerWrapper implements PlayerWrapper, IcyDataSource.IcyDataSou
 
         if (recordableListener != null) {
             recordableListener.onBytesAvailable(buffer, offset, length);
+        }
+    }
+
+    private void startBufferingTimeout() {
+        cancelBufferingTimeout();
+        bytesReceivedAtBufferingStart = totalTransferredBytes;
+        bufferingStartTimeMs = System.currentTimeMillis();
+        bufferingTimeoutTask = () -> {
+            bufferingTimeoutTask = null;
+            if (player != null && player.getPlaybackState() == Player.STATE_BUFFERING) {
+                long bytesSinceBuffering = totalTransferredBytes - bytesReceivedAtBufferingStart;
+                long elapsedMs = System.currentTimeMillis() - bufferingStartTimeMs;
+                String detail;
+                if (bytesSinceBuffering == 0) {
+                    detail = "No audio data received after " + (elapsedMs / 1000) + "s";
+                } else {
+                    detail = "Stream stalled after " + (bytesSinceBuffering / 1024) + " KB in " + (elapsedMs / 1000) + "s";
+                }
+                Log.w(TAG, "Buffering timeout: " + detail);
+                stop();
+                stateListener.onPlayerError(R.string.error_stream_stalled, detail);
+            }
+        };
+        playerThreadHandler.postDelayed(bufferingTimeoutTask, BUFFERING_TIMEOUT_MS);
+    }
+
+    private void cancelBufferingTimeout() {
+        if (bufferingTimeoutTask != null) {
+            playerThreadHandler.removeCallbacks(bufferingTimeoutTask);
+            bufferingTimeoutTask = null;
         }
     }
 
@@ -387,13 +430,34 @@ public class ExoPlayerWrapper implements PlayerWrapper, IcyDataSource.IcyDataSou
         // Stop playing since it is either irrecoverable error in the player or our data source failed to reconnect.
         if (fullStopTask != null) {
             stop();
-            stateListener.onPlayerError(R.string.error_play_stream);
+            stateListener.onPlayerError(R.string.error_play_stream, describePlaybackError(error));
         }
     }
 
     @Override
     public void onPlaybackParametersChanged(@NonNull PlaybackParameters playbackParameters) {
         // Do nothing
+    }
+
+    private static String describePlaybackError(@NonNull PlaybackException error) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(error.getErrorCodeName());
+
+        Throwable cause = error.getCause();
+        if (cause instanceof HttpDataSource.HttpDataSourceException) {
+            HttpDataSource.HttpDataSourceException httpEx = (HttpDataSource.HttpDataSourceException) cause;
+            if (httpEx instanceof HttpDataSource.InvalidResponseCodeException) {
+                int responseCode = ((HttpDataSource.InvalidResponseCodeException) httpEx).responseCode;
+                sb.append(" (HTTP ").append(responseCode).append(")");
+            }
+            if (httpEx.getMessage() != null) {
+                sb.append(": ").append(httpEx.getMessage());
+            }
+        } else if (cause != null && cause.getMessage() != null) {
+            sb.append(": ").append(cause.getMessage());
+        }
+
+        return sb.toString();
     }
 
     final class CustomLoadErrorHandlingPolicy extends DefaultLoadErrorHandlingPolicy {
@@ -414,7 +478,8 @@ public class ExoPlayerWrapper implements PlayerWrapper, IcyDataSource.IcyDataSou
             IOException exception = loadErrorInfo.exception;
 
             if (exception instanceof HttpDataSource.InvalidContentTypeException) {
-                stateListener.onPlayerError(R.string.error_play_stream);
+                String contentType = ((HttpDataSource.InvalidContentTypeException) exception).contentType;
+                stateListener.onPlayerError(R.string.error_play_stream, "Invalid content type: " + contentType);
                 return C.TIME_UNSET; // Immediately surface error if we cannot play content type
             }
 
@@ -449,10 +514,18 @@ public class ExoPlayerWrapper implements PlayerWrapper, IcyDataSource.IcyDataSou
             switch (playbackState) {
                 case Player.STATE_READY:
                     cancelStopTask();
+                    cancelBufferingTimeout();
                     stateListener.onStateChanged(PlayState.Playing);
                     break;
                 case Player.STATE_BUFFERING:
+                    startBufferingTimeout();
                     stateListener.onStateChanged(PlayState.PrePlaying);
+                    break;
+                case Player.STATE_ENDED:
+                    cancelBufferingTimeout();
+                    break;
+                case Player.STATE_IDLE:
+                    cancelBufferingTimeout();
                     break;
             }
 

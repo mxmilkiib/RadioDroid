@@ -7,6 +7,7 @@ import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.preference.PreferenceManager;
 
 import net.programmierecke.radiodroid2.BuildConfig;
@@ -34,9 +35,9 @@ public class RadioPlayer implements PlayerWrapper.PlayListener, Recordable {
     public interface PlayerListener {
         void onStateChanged(final PlayState status, final int audioSessionId);
 
-        void onPlayerWarning(final int messageId);
+        void onPlayerWarning(final int messageId, @Nullable final String detail);
 
-        void onPlayerError(final int messageId);
+        void onPlayerError(final int messageId, @Nullable final String detail);
 
         void onBufferedTimeUpdate(final long bufferedMs);
 
@@ -109,11 +110,11 @@ public class RadioPlayer implements PlayerWrapper.PlayListener, Recordable {
 
         playStationTask = new PlayStationTask(station, mainContext,
                 (url) -> RadioPlayer.this.play(station.playableUrl, station.Name, isAlarm),
-                (executionResult) -> {
+                (executionResult, failureDetail) -> {
                     RadioPlayer.this.playStationTask = null;
 
                     if (executionResult == PlayStationTask.ExecutionResult.FAILURE) {
-                        RadioPlayer.this.onPlayerError(R.string.error_station_load);
+                        RadioPlayer.this.onPlayerError(R.string.error_station_load, failureDetail);
                     }
                 });
 
@@ -279,14 +280,14 @@ public class RadioPlayer implements PlayerWrapper.PlayListener, Recordable {
     }
 
     @Override
-    public void onPlayerWarning(int messageId) {
-        playerThreadHandler.post(() -> playerListener.onPlayerWarning(messageId));
+    public void onPlayerWarning(int messageId, @Nullable String detail) {
+        playerThreadHandler.post(() -> playerListener.onPlayerWarning(messageId, detail));
     }
 
     @Override
-    public void onPlayerError(int messageId) {
+    public void onPlayerError(int messageId, @Nullable String detail) {
         pause();
-        playerThreadHandler.post(() -> playerListener.onPlayerError(messageId));
+        playerThreadHandler.post(() -> playerListener.onPlayerError(messageId, detail));
     }
 
     @Override

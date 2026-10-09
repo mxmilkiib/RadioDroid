@@ -38,7 +38,7 @@ public class PlayStationTask {
     }
 
     public interface PostExecuteTask {
-        void onPostExecute(ExecutionResult executionResult);
+        void onPostExecute(ExecutionResult executionResult, @Nullable String failureDetail);
     }
 
     private PlayFunc playFunc;
@@ -47,6 +47,7 @@ public class PlayStationTask {
     private WeakReference<Context> contextWeakReference;
     private Future<?> future;
     private boolean cancelled = false;
+    @Nullable private String failureDetail = null;
 
     public PlayStationTask(@NonNull DataRadioStation stationToPlay, @NonNull Context ctx,
                            @NonNull PlayFunc playFunc, @Nullable PostExecuteTask postExecuteTask) {
@@ -111,6 +112,7 @@ public class PlayStationTask {
 
                         if (!stationToPlay.hasValidUuid()) {
                             if (!stationToPlay.refresh(radioDroidApp.getHttpClient(), ctx)) {
+                                failureDetail = "Station refresh failed (invalid UUID or API unreachable)";
                                 return null;
                             }
                         }
@@ -119,8 +121,13 @@ public class PlayStationTask {
                             return null;
                         }
 
-                        return Utils.getRealStationLink(radioDroidApp.getHttpClient(), ctx.getApplicationContext(), stationToPlay.StationUuid);
+                        String url = Utils.getRealStationLink(radioDroidApp.getHttpClient(), ctx.getApplicationContext(), stationToPlay.StationUuid);
+                        if (url == null) {
+                            failureDetail = "Could not resolve stream URL from radio-browser API";
+                        }
+                        return url;
                     } else {
+                        failureDetail = "Context lost";
                         return null;
                     }
                 },
@@ -139,15 +146,10 @@ public class PlayStationTask {
         if (result != null) {
             stationToPlay.playableUrl = result;
             playFunc.play(result);
-        } else {
-            Toast toast = Toast.makeText(ctx.getApplicationContext(),
-                    ctx.getResources()
-                            .getText(R.string.error_station_load), Toast.LENGTH_SHORT);
-            toast.show();
         }
 
         if (postExecuteTask != null) {
-            postExecuteTask.onPostExecute(result != null ? ExecutionResult.SUCCESS : ExecutionResult.FAILURE);
+            postExecuteTask.onPostExecute(result != null ? ExecutionResult.SUCCESS : ExecutionResult.FAILURE, failureDetail);
         }
     }
 

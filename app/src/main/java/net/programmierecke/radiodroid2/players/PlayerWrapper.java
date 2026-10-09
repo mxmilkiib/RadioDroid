@@ -3,6 +3,7 @@ package net.programmierecke.radiodroid2.players;
 import android.content.Context;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import net.programmierecke.radiodroid2.station.live.ShoutcastInfo;
 import net.programmierecke.radiodroid2.station.live.StreamLiveInfo;
@@ -14,9 +15,9 @@ public interface PlayerWrapper extends Recordable {
     interface PlayListener {
         void onStateChanged(PlayState state);
 
-        void onPlayerWarning(final int messageId);
+        void onPlayerWarning(final int messageId, @Nullable final String detail);
 
-        void onPlayerError(final int messageId);
+        void onPlayerError(final int messageId, @Nullable final String detail);
 
         void onDataSourceShoutcastInfo(ShoutcastInfo shoutcastInfo, boolean isHls);
 

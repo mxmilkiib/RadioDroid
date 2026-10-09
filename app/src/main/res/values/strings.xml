@@ -245,6 +245,8 @@
     <string name="error_caching_stream">Stream caching problem</string>
     <string name="error_play_stream">Unable to play stream</string>
     <string name="error_stream_reconnect_timeout">Unable to reconnect to the stream: timeout</string>
+    <string name="error_stream_stalled">Stream stalled</string>
+    <string name="error_stream_connection_lost">Stream connection lost</string>
     <string name="warning_no_network_trying_resume">No network connection. Trying to resume when connection is back.</string>
     <string name="giving_up_resume">Giving up attempt to resume playback</string>
 

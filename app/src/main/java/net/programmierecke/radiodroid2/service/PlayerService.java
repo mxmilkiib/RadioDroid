@@ -31,6 +31,7 @@ import android.os.RemoteException;
 import android.support.v4.media.MediaMetadataCompat;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.JobIntentService;
 import androidx.media.app.NotificationCompat.MediaStyle;
 import androidx.media.session.MediaButtonReceiver;
@@ -135,6 +136,7 @@ public class PlayerService extends JobIntentService implements RadioPlayer.Playe
     private PauseReason pauseReason = PauseReason.NONE;
 
     private int lastErrorFromPlayer = -1;
+    @Nullable private String lastErrorDetail = null;
 
     private long lastMeteredConnectionWarningTime;
 
@@ -780,6 +782,9 @@ public class PlayerService extends JobIntentService implements RadioPlayer.Playe
             } else {
                 try {
                     error = itsContext.getResources().getString(lastErrorFromPlayer);
+                    if (lastErrorDetail != null && !lastErrorDetail.isEmpty()) {
+                        error += ": " + lastErrorDetail;
+                    }
                 } catch (Resources.NotFoundException ex) {
                     Log.e(TAG, String.format("Unknown play error: %d", lastErrorFromPlayer), ex);
                 }
@@ -827,7 +832,7 @@ public class PlayerService extends JobIntentService implements RadioPlayer.Playe
                 AudioManager.AUDIOFOCUS_GAIN);
         if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             Log.e(TAG, "acquiring audio focus failed!");
-            toastOnUi(R.string.error_grant_audiofocus);
+            toastOnUi(R.string.error_grant_audiofocus, null);
         }
 
         return result;
@@ -910,6 +915,9 @@ public class PlayerService extends JobIntentService implements RadioPlayer.Playe
         } else if (lastErrorFromPlayer != -1) {
             try {
                 theMessage = itsContext.getResources().getString(lastErrorFromPlayer);
+                if (lastErrorDetail != null && !lastErrorDetail.isEmpty()) {
+                    theMessage += ": " + lastErrorDetail;
+                }
             } catch (Resources.NotFoundException ex) {
                 Log.e(TAG, String.format("Unknown play error: %d", lastErrorFromPlayer), ex);
             }
@@ -963,11 +971,15 @@ public class PlayerService extends JobIntentService implements RadioPlayer.Playe
         }
     }
 
-    private void toastOnUi(final int messageId) {
+    private void toastOnUi(final int messageId, @Nullable final String detail) {
         handler.post(new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(itsContext, itsContext.getResources().getString(messageId), Toast.LENGTH_SHORT).show();
+                String message = itsContext.getResources().getString(messageId);
+                if (detail != null && !detail.isEmpty()) {
+                    message += ": " + detail;
+                }
+                Toast.makeText(itsContext, message, Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -1144,6 +1156,7 @@ public class PlayerService extends JobIntentService implements RadioPlayer.Playe
             @Override
             public void run() {
                 lastErrorFromPlayer = -1;
+                lastErrorDetail = null;
 
                 switch (state) {
                     case Paused:
@@ -1204,16 +1217,17 @@ public class PlayerService extends JobIntentService implements RadioPlayer.Playe
     }
 
     @Override
-    public void onPlayerWarning(int messageId) {
-        onPlayerError(messageId);
+    public void onPlayerWarning(int messageId, @Nullable String detail) {
+        onPlayerError(messageId, detail);
     }
 
     @Override
-    public void onPlayerError(int messageId) {
+    public void onPlayerError(int messageId, @Nullable String detail) {
         handler.post(() -> {
             PlayerService.this.lastErrorFromPlayer = messageId;
+            PlayerService.this.lastErrorDetail = detail;
 
-            toastOnUi(messageId);
+            toastOnUi(messageId, detail);
             updateNotification();
         });
     }

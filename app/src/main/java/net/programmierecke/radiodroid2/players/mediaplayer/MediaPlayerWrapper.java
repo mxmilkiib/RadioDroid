@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import net.programmierecke.radiodroid2.BuildConfig;
 import net.programmierecke.radiodroid2.R;
@@ -105,18 +106,18 @@ public class MediaPlayerWrapper implements PlayerWrapper, StreamProxyListener {
             });
 
             mediaPlayer.setOnErrorListener((mp, what, extra) -> {
-                stateListener.onPlayerError(R.string.error_play_stream);
+                stateListener.onPlayerError(R.string.error_play_stream, "MediaPlayer error: " + what + ", " + extra);
                 return true;
             });
         } catch (IllegalArgumentException e) {
             Log.e(TAG, "" + e);
-            stateListener.onPlayerError(R.string.error_stream_url);
+            stateListener.onPlayerError(R.string.error_stream_url, e.getMessage());
         } catch (IOException e) {
             Log.e(TAG, "" + e);
-            stateListener.onPlayerError(R.string.error_caching_stream);
+            stateListener.onPlayerError(R.string.error_caching_stream, e.getMessage());
         } catch (Exception e) {
             Log.e(TAG, "" + e);
-            stateListener.onPlayerError(R.string.error_play_stream);
+            stateListener.onPlayerError(R.string.error_play_stream, e.getMessage());
         }
     }
 
